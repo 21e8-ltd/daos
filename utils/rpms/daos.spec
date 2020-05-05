@@ -6,7 +6,7 @@
 
 Name:          daos
 Version:       1.1.0
-Release:       14%{?relval}%{?dist}
+Release:       15%{?relval}%{?dist}
 Summary:       DAOS Storage Engine
 
 License:       Apache
@@ -171,14 +171,14 @@ sed -i -e '/AppendUnique(RPATH=.*)/d' $rpath_files
 
 %define conf_dir %{_sysconfdir}/daos
 
-scons %{?no_smp_mflags}    \
+scons %{?_smp_mflags}      \
       --config=force       \
       USE_INSTALLED=all    \
       CONF_DIR=%{conf_dir} \
       PREFIX=%{?buildroot}
 
 %install
-scons %{?no_smp_mflags}               \
+scons %{?_smp_mflags}                 \
       --config=force                  \
       --install-sandbox=%{?buildroot} \
       %{?buildroot}%{_prefix}         \
@@ -345,6 +345,9 @@ getent group daos_admins >/dev/null || groupadd -r daos_admins
 %{_libdir}/*.a
 
 %changelog
+* Tue May 05 2020 Brian J. Murrell <brian.murrell@intel.com> - 1.1.0-15
+- Enable parallel building with _smp_mflags
+
 * Mon Apr 30 2020 Brian J. Murrell <brian.murrell@intel.com> - 1.1.0-14
 - Move fuse dependencies to the client subpackage
 
