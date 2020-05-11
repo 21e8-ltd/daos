@@ -979,10 +979,12 @@ def install_debuginfos():
     cmds = []
 
     if USE_DEBUGINFO_INSTALL:
-        cmds.extend([
-            "sudo", "debuginfo-install", "-y",
+        yum_args = [
             "--exclude", "ompi-debuginfo,gcc-debuginfo,gcc-base-debuginfo",
-            "daos-server", "libpmemobj", "python", "openmpi3"])
+            "daos-server", "libpmemobj", "python", "openmpi3"]
+        cmds.append(["sudo", "yum", "-y", "install"] + yum_args)
+        cmds.append(["sudo", "debuginfo-install", "-y"] + yum_args)
+        print(cmds)
     else:
         import yum # pylint: disable=import-error
 
@@ -1030,15 +1032,20 @@ def install_debuginfos():
     # yum_base.resolveDeps()
     # yum_base.buildTransaction()
     # yum_base.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
-    cmds.extend(["sudo", "yum", "-y", "--enablerepo=\\*debug\\*", "install"])
+
+    # Now install a few pkgs that debuginfo-install wouldn't
+    cmd = ["sudo", "yum", "-y", "--enablerepo=*debug*", "install"]
     for pkg in install_pkgs:
         try:
-            cmds.append(
+            cmd.append(
                 "{}-{}-{}".format(pkg['name'], pkg['version'], pkg['release']))
         except KeyError:
-            cmds.append(pkg['name'])
+            cmd.append(pkg['name'])
 
-    print(get_output(cmds))
+    cmds.append(cmd)
+
+    for cmd in cmds:
+        print(get_output(cmd))
 
 
 def process_the_cores(avocado_logs_dir, test_yaml, args):
@@ -1110,20 +1117,30 @@ def process_the_cores(avocado_logs_dir, test_yaml, args):
             exe_magic.load()
             exe_type = exe_magic.file(corefile_fqpn)
             exe_name_start = exe_type.find("execfn: '") + 9
-            exe_name_end = exe_type.find("', platform:")
-            exe_name = exe_type[exe_name_start:exe_name_end]
-            cmd = [
-                "gdb", "-cd={}".format(daos_cores_dir),
-                "-ex", "\"set pagination off\"",
-                "-ex", "\"thread apply all bt full\""
-                "-ex", "\"detach\"",
-                "-ex", "\"quit\"",
-                exe_name, corefile
-            ]
-            stack_trace_file = os.path.join(
-                daos_cores_dir, "{}.stacktrace".format(corefile))
-            with open(stack_trace_file, "w") as stack_trace:
-                stack_trace.writelines(get_output(cmd))
+            exe_name_end = 0
+            if exe_name_start > 8:
+                exe_name_end = exe_type.find("', platform:")
+            else:
+                exe_name_start = exe_type.find("from '") + 6
+                if exe_name_start > 5:
+                    exe_name_end = exe_type[exe_name_start:].find(" ") + exe_name_start
+                else:
+                    print("Unable to determine executable name from: "
+                          "{}\nNot creating stacktrace".format(exe_type))
+            if exe_name_end:
+                exe_name = exe_type[exe_name_start:exe_name_end]
+                cmd = [
+                    "gdb", "-cd={}".format(daos_cores_dir),
+                    "-ex", "\"set pagination off\"",
+                    "-ex", "\"thread apply all bt full\""
+                    "-ex", "\"detach\"",
+                    "-ex", "\"quit\"",
+                    exe_name, corefile
+                ]
+                stack_trace_file = os.path.join(
+                    daos_cores_dir, "{}.stacktrace".format(corefile))
+                with open(stack_trace_file, "w") as stack_trace:
+                    stack_trace.writelines(get_output(cmd))
             print("Removing {}".format(corefile_fqpn))
             os.unlink(corefile_fqpn)
 
