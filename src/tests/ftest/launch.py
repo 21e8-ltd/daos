@@ -982,11 +982,13 @@ def install_debuginfos():
         yum_args = [
             "--exclude", "ompi-debuginfo,gcc-debuginfo,gcc-base-debuginfo",
             "daos-server", "libpmemobj", "python", "openmpi3"]
+        cmds.append(["sudo", "yum", "--enablerepo=*debug*", "makecache"])
+        cmds.append(["sudo", "repoquery", "--enablerepo=*debug*", "--qf",
+                     "%{name}-%{evr} %{repoid}", "*debuginfo*"])
         cmds.append(["sudo", "yum", "-y", "install"] + yum_args)
         cmds.append(["sudo", "debuginfo-install", "-y"] + yum_args)
-        print(cmds)
     else:
-        import yum # pylint: disable=import-error
+        import yum # pylint: disable=import-error,import-outside-toplevel
 
         yum_base = yum.YumBase()
         yum_base.conf.assumeyes = True
@@ -1056,7 +1058,7 @@ def process_the_cores(avocado_logs_dir, test_yaml, args):
         test_yaml (str): yaml file containing host names
         args (argparse.Namespace): command line arguments for this program
     """
-    import fnmatch
+    import fnmatch # pylint: disable=import-outside-toplevel
 
     this_host = socket.gethostname().split(".")[0]
     host_list = get_hosts_from_yaml(test_yaml, args)
@@ -1107,7 +1109,7 @@ def process_the_cores(avocado_logs_dir, test_yaml, args):
             pattern (str): the fnmatch/glob pattern of core files to
                            run gdb on
         """
-        import magic
+        import magic # pylint: disable=import-outside-toplevel
 
         for corefile in cores:
             if not fnmatch.fnmatch(corefile, pattern):
@@ -1123,7 +1125,8 @@ def process_the_cores(avocado_logs_dir, test_yaml, args):
             else:
                 exe_name_start = exe_type.find("from '") + 6
                 if exe_name_start > 5:
-                    exe_name_end = exe_type[exe_name_start:].find(" ") + exe_name_start
+                    exe_name_end = exe_type[exe_name_start:].find(" ") + \
+                                   exe_name_start
                 else:
                     print("Unable to determine executable name from: "
                           "{}\nNot creating stacktrace".format(exe_type))
