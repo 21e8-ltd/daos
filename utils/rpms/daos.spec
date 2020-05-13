@@ -171,14 +171,14 @@ sed -i -e '/AppendUnique(RPATH=.*)/d' $rpath_files
 
 %define conf_dir %{_sysconfdir}/daos
 
-scons %{?no_smp_mflags}    \
+scons %{?_smp_mflags}      \
       --config=force       \
       USE_INSTALLED=all    \
       CONF_DIR=%{conf_dir} \
       PREFIX=%{?buildroot}
 
 %install
-scons %{?no_smp_mflags}               \
+scons %{?_smp_mflags}                 \
       --config=force                  \
       --install-sandbox=%{?buildroot} \
       %{?buildroot}%{_prefix}         \
